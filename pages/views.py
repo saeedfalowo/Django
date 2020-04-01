@@ -27,8 +27,12 @@ def contact_view(request, *args, **kwargs):
 
 	my_context = {
 		"my_text"	: "This is my contact",
+		"title"		: "this is my contact",
 		"my_number"	: 12369,
-		"my_list"	: [123,456,789]
+		"my_list"	: [123,456,789,"Abc"],
+		"my_html"	: "<h1>Hello World</h1>"
 
 	}
+	# for item in [123,456,789]:
+	# 	my_context['item1'] = item
 	return render(request, "contact.html",my_context)

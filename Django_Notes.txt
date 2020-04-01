@@ -8,6 +8,7 @@ Setup:  	joincfe.com/from-zero
 env:    	django
 activate: 	cd ~/Dev/venv/ && source bin/activate
 windows ubuntu: cd /mnt/c/Users/User/Documents/GitHub/Django/Dev/trydjango && source bin/activate
+Launch django:	cd src && python manage.py runserver
 -------------------------------------------------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -------------------------------------------------------------------------------------------------
@@ -226,3 +227,102 @@ Create and deploy context:
 		    {{ my_text }}, {{ my_number }}
 		</p>
 
+--------------------
+FOR LOOP IN TEMPLATE
+--------------------
+The wrong way to render a list is to render out the list as different variables in view.py
+Like so, within the def function in views.py:
+	for item in [123,456,789]:
+		my_context['item1'] = item
+
+The templates themselves can have this sort of flow.
+We just need to go into the template and implement a loop on any given context object, context variable.
+The following will iterate through every item in my_list:
+	<ul>
+		{% for my_sub_item in my_list %}
+		<li>{{ my_sub_item }}</li>
+		{% endfor %}
+	</ul>
+Number the list items with:
+	<ul>
+		{% for my_sub_item in my_list %}
+		<li>{{ forloop.counter}} - {{ my_sub_item }}</li>
+		{% endfor %}
+	</ul>
+
+------------------------------
+USING CONDITIONS IN A TEMPLATE
+------------------------------
+Using conditional statement like "if" "elif" and "else" statements can be constructed
+like so:
+	<ul>
+		{% for my_sub_item in my_list %}
+		    {% if my_sub_item == 123 %}
+		        <li>{{ forloop.counter}} - {{ my_sub_item|add:22 }}</li>
+		    {% elif my_sub_item == "Abc" %}
+			<li>This is not a network</li>
+		    {% else %}
+			<li>{{ forloop.counter}} - {{ my_sub_item }}</li>
+		    {% endif %}
+		{% endfor %}
+	</ul>
+
+The for loop and "if" "elif" and "else" conditional statement above lists the contents
+of a list in a dictionary in views.py onto the "contact" webpage
+The operation: 
+	loops through the content of my_list
+		if the my_list[i] == 123:
+		   print(add 22 to the number in my_list[i])
+		elseif my_list[i] == "Abc"
+		   print("This is not a network")
+		else
+		   print(my_list[i])
+		end if
+
+These "if", "elif", "else", "for" are are built-in template tags
+
+-------------------------
+TEMPLATE TAGS AND FILTERS
+-------------------------
+A rule of thumb, if you see "{{", you will probably be able to use a pipe and then some
+filter in there.
+"add" is a filter we used to add 22 to the value of my_list[i] in the conditional
+statement above.
+
+You can use "add" to:
+	add numbers or a string that represent numbers
+	add variables
+	
+You can use the filter "capfirst" to make sure your text string always start with a
+capital letter.
+The following shows how the filter is utilized
+	{{ title|capfirst }}
+
+simple right?!
+We can also use multiple filters by stacking them together.
+The following implementation first capitalizes the first letter,
+Then converts the remaining letters into their upper case forms
+	{{ title|capfirst|upper }}
+
+When we pass in an html as a context variable within the my_context dictionary
+in views.py, like so:
+	"my_html"	: "<h1>Hello World</h1>"
+
+when it is rendered like so:
+	{{ my_html }}
+
+by default, it is rendered as the exact same text in the my_html key value, like so:
+	<h1>Hello World</h1>
+
+However, using the filter "safe" or "striptags" like so:
+	{{ my_html|safe }}
+	{{ my_html|striptags}}
+
+will render the text properly by stipping the html tags like so:
+	Hello World
+
+The filter "title" titlizes the entire text by capitalizing the first letter of each word
+
+------------------------------------------
+RENDER DATA FROM THE DATABASE WITH A MODEL
+------------------------------------------
