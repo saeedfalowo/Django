@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form method='POST'> {% csrf_token %}
+	{{ form.as_p }}
+	<!-- .as_p this turns the form element that is being passed in as context
+	into an actual html form rendered out with paragraph text? -->
+	<input type='submit' value='Save' />
+	
+</form>
+
+{% endblock %}

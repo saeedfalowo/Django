@@ -14,5 +14,5 @@ class Product(models.Model):
 	# 'null' has to do with the database
 	# 'blank=False' means it is required
 	# 'null=False' means the database can be empty
-	featured    = models.BooleanField()
+	featured    = models.BooleanField(default=False)
 	# null=True means, all the old values should be left empty in the database

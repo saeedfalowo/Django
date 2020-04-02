@@ -421,3 +421,64 @@ Because we want all our codes under the "products" folder, we will then:
 ------------------
 DJANGO MODEL FORMS
 ------------------
+We want to allow the users to save data in the database without using the admin or
+python shell, so;
+Lets break down the basics of using Django Model Forms
+Inside of any given app:
+	Make a new file in products with the name, forms.py.
+	Create your ProductForm class
+	Render the ProductForm out in views.py
+	Create a form html file with the name, product_create.html
+	Create a form html element in the product_create.html file with the the following
+	html codes
+		<form>
+		   {{ form.as_p }}
+		   <!-- .as_p this turns the form element that is being passed in as context
+		   into an actual html form rendered out with paragraph text? -->
+		   <input type='submit' value='Save' />
+		</form>
+	Bring the product_create_view function into our urls as 'create'
+	Navigate to your create webpage like so:
+		http://127.0.0.1:8000/create/
+	Enter values into the fiels provided like so:
+		Title: 		New Product 3
+		Description: 	This is awesome
+		Price:		5.50
+	And then click save.
+	The url will now have the following after "create/"
+		?title=+New+Product+3&description=This+is+awesome&price=5.50
+	This is an indication that the method used on the form itself wasnt specified
+	So go back to product_create.html and replace
+	<form> with <form method='POST'> {% csrf_token %} like so:
+		<form method='POST'> {% csrf_token %}
+		   {{ form.as_p }}
+		   <!-- .as_p this turns the form element that is being passed in as context
+		   into an actual html form rendered out with paragraph text? -->
+		   <input type='submit' value='Save' />
+		</form>
+	
+	If we try to enter values into the fields again we will get this error:
+		NOT NULL constraint failed: products_product.featured
+	This is because in our models.py Product class, featured = models.BooleanField()
+	We just need to replace () with (default=False)
+
+We've now made changes to our model so we need to makemigrations, like so:
+	cd /mnt/c/Users/User/Documents/GitHub/Django/Dev/trydjango && source bin/activate
+	cd src
+	python manage.py makemigrations
+	python manage.py migrate
+
+Now try to enter values into the fields again and save.
+We cant tell if anything has been done because the field values remain as typed
+We can go into the admin to find out of the new product has been saved or do it through
+python shell.
+To clear out the values entered into the fields after hitting save is by
+re-rendering the form object after the form.save() line like so:
+	form = ProductForm(request.POST or None)
+	if form.is_valid():
+	   form.save()
+	   form = ProductForm()
+
+-------------
+RAW HTML FORM
+-------------
