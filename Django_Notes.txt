@@ -482,3 +482,222 @@ re-rendering the form object after the form.save() line like so:
 -------------
 RAW HTML FORM
 -------------
+Lets first get rid of any Django related stuff leaving just the form html element within
+the block content, like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<form method='POST'>
+	   <input type='submit' value='Save' />
+	</form>
+
+	{% endblock %}
+
+Before the input element for the save button;
+	<input type='submit' value='Save' />
+Enter a new input element for the form like so:
+	<input type='text' name='title' placeholder="Your title"/>
+
+Navigate to your views script and make it so the product_create_view function
+only renders out an empty context, like so:
+	def product_create_view(request):
+	   context = {}
+	   return render(request, "products/product_create.html", context)
+
+After saving, the the web address, http://127.0.0.1:8000/create/
+should only give out text field with the placeholder "Your title" with a save button right
+next to it.
+However, typing something within the text field and hitting save will give a "forbidden" error.
+That is because of the POST method used in the form element in the html file:
+	<form method='POST'>
+Replacing that with this:
+	<form method='GET'>
+Will rectify the problem.
+After hitting save, the url will change to include the input recently typed, like so:
+	http://127.0.0.1:8000/create/?title=Firstfirst
+GET method is the default for form elements, so using <form> without any method specified
+will give the same result.
+
+The "POST" method gave us an error due to Djangos security measures being triggered.
+If we still want to use the "POST" method, we just need to add a "/search/" action, like so:
+	<form action='/search/' method='POST'>
+This will make our url look like so:
+	http://127.0.0.1:8000/search/
+However, we will get a "Page Not Found" error because the action was to find a page that
+doesnt exist in the website.
+We can use this method to search for something in a different website, like google!
+We only need to change the action, method, and name parameters to the website's, like so:
+	<form action='http://www.google.com/search' method='GET'>
+	   <input type='text' name='q' placeholder="Your title"/>
+	   <input type='submit' value='Save' />
+	
+	</form>
+We have just created out own google search form.
+Hitting save after typying anything in the text field will search for that input on google.
+This shows that the action will change the url to whatever url is put there.
+
+However, by default:
+	"action='.'" or "action=''"
+The action goes to the current url
+
+WHAT ARE GET AND POST Methods???
+"GET" means you go to any url, you are getting information from there
+"POST" is used to save any information in the backend.
+
+This is why using the "POST" method for a google search form will yield a 405 error.
+We cant save any information in google's backend!
+
+We can print into our backend by printing using:
+	print(request.GET)
+If we type in anything in our text field, we will see it printed in our ubuntu backend
+However, using GET to save data is an unsafe method.
+
+----------------
+PURE DJANGO FORM
+----------------
+Navigate to your views script and make it so the product_create_view function
+only renders out an empty context, like so:
+	def product_create_view(request):
+	   context = {}
+	   return render(request, "products/product_create.html", context)
+
+Navigate to your forms script and create a new class, RawProductForm like so:
+	class RawProductForm(forms.Form):
+	   title 		= forms.CharField()
+	   description		= forms.CharField()
+	   price		= forms.DecimalField()
+
+Import the newly created class into the views script like so:
+	from .forms import RawProductForm
+The render out the form within the product_create_view() function
+	Create form instance and add to context like so:
+		my_form = RawProductForm()
+		context = {"form": my_form}
+Navigate to the product_create html file, and create a form element like so:
+	<form action='.' method='POST'> {% csrf_token %}
+	   {{ form.as_p }}
+	   <input type='submit' value='Save' />
+	
+	</form>
+Navigating to the web address http://127.0.0.1:8000/create/
+Should give us three text fields, namely:
+	Title, Description, Price
+If we input anything into these text fields and hit the save button, nothing will happen
+This is because we have not saved the data in our backend yet.
+To save the input data, navigate back to your product_create_views within views.py
+Make the following addition and alteration
+	my_form = RawProductForm(request.POST)
+	Product.objects.create(**my_form.cleaned_data)
+Then render the form again to clear the text fields, like so
+	my_form = RawProductForm()
+
+If messages like this
+	"This field is required."
+is displayed above the text fields, know that this is Djangos validation error
+
+You can get rid of these validation errors and also print out the input data and
+encountered errors onto the backend like so:
+	my_form = RawProductForm()
+	if request.method == "POST":
+		my_form = RawProductForm(request.POST)
+		if my_form.is_valid():
+			# Now the data is good
+			print(my_form.cleaned_data)
+			Product.objects.create(**my_form.cleaned_data)
+		else:
+			print(my_form.errors)
+
+	my_form = RawProductForm()
+
+Now the validation error will only come up when you hover over the text field
+
+------------
+FORM WIDGETS
+------------
+We can add properties to the forms by passing in input parameters to the text field objects
+Like the CharField and DecimalField.
+Navigate to the RawProductForm class within the forms.py script
+To make a field to be required or not required, we can simply do this:
+	forms.CharField(required=True)
+	forms.CharField(required=False)
+Default for each form is required, so removing the required parameter altogether will make
+the input into the text field mandatory.
+The field documentation will tell you what is default.
+
+You can also;
+	show different labels for the text field
+		forms.CharField(label='')
+	define an initial value for the text field
+		forms.CharField(initial=9.99)
+	add a widget or widget with attributes
+		forms.CharField(widget=Textarea)
+		forms.CharField(widget=Textarea(attrs={}))
+	show a placeholder using widget attributes
+		forms.CharField(widget=forms.TextInput(
+			attrs={"placeholder": "Whats your title?"}))
+		
+-----------------------
+FORM VALIDATION METHODS
+-----------------------
+Navigate to ProductForm class within the forms.py script
+You can override the any of the fields within the Meta class by simply
+initializing a field name outside of the Meta class, like so:
+
+	class ProductForm(forms.ModelForm):
+	   title = forms.CharField(
+		label='Newerer Title',
+		widget=forms.TextInput(
+			attrs={"placeholder": "Whats your title?"}
+			)
+		)
+	   class Meta:
+		model 	= Product
+		fields	= ['title','description','price']
+
+Navigate to the views.py script and comment out any other product_create_view function
+Leaving only this product_create_view function uncommented
+	def product_create_view(request):
+	form = ProductForm(request.POST or None)
+	if form.is_valid():
+		form.save()
+		form = ProductForm()
+	
+	context = {
+		'form': form
+	}
+	# return render(request, "product/detail.html", context)
+	return render(request, "products/product_create.html", context)
+
+What if we want the input title to contain a combination of chars, a word, like "cfe"?
+Then what we would do is define a function within the class, like so:
+	def clean_<my_field_name>(self, *args, **kwargs):
+If the title is the field we want to enforce the rule on:
+	def clean_title(self, *args, **kwargs):
+Then we can you an if statement raise a validation error is condition is not met, like so:
+	if "CFE" in title:
+	   raise forms.ValidationError("This is not a valid title")
+	return title
+
+When we enter an input that does not contain "CFE" in the title text field,
+we should get a validation error message on top of the field saying:
+	"This is not a valid title"
+
+We can use this to validate email input as well.
+We can check if the email contains @ or ends with combination of char like, "edu"
+
+------------------------
+INITIAL VALUES FOR FORMS
+------------------------
+To set initial values on a form, Navigate to products/views and declare your initial data
+within the product_create_view function like so:
+	initial_data = {'title': "My intial data"}
+Then pass it into the ProductForm object as an "initial" parameter, like so:
+	form = ProductForm(request.POST or None, initial=initial_data)
+
+You can also pass in Product objects as initial forms data like so:
+	obj = Product.objects.get(id=1)
+	form = ProductForm(request.POST or None, instance=obj)
+
+-------------------
+DYNAMIC URL ROUTING
+-------------------
