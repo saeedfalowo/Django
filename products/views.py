@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import Http404
 
 # Import the Product class
 from .models import  Product
@@ -58,3 +59,50 @@ def product_create_view(request):
 # 		"form": my_form
 # 	}
 # 	return render(request, "products/product_create_djangoraw.html", context)
+
+def dynamic_lookup_view(request,my_id):
+	# obj = Product.objects.get(id=my_id)
+	obj = get_object_or_404(Product, id=my_id)
+	# try:
+	# 	obj = Product.objects.get(id=my_id)
+	# except Product.DoesNotExist:
+	# 	raise Http404
+
+	context = {
+		"object": obj
+	}
+	return render(request, "products/product_detail_url_routing.html", context)
+	# return render(request, "products/product_detail_dynamic_url_linking.html", context)
+
+def product_delete_view(request,my_id):
+	obj = get_object_or_404(Product, id=my_id)
+	# POST request
+	if request.method == "POST":
+		obj.delete() # confirming delete
+		return redirect('../../')
+	context = {
+		"object": obj
+	}
+	return render(request, "products/product_detail_delete.html", context)
+
+
+def product_list_view(request):
+	queryset = Product.objects.all() # list of objects
+	context = { "object_list": queryset }
+	# return render(request, "products/product_detail_obj_list.html", context)
+	return render(request, "products/product_detail_dynamic_url_linking.html", context)
+
+"""def dynamic_url_lookup_view(request,my_id):
+	# obj = Product.objects.get(id=my_id)
+	obj = get_object_or_404(Product, id=my_id)
+	# try:
+	# 	obj = Product.objects.get(id=my_id)
+	# except Product.DoesNotExist:
+	# 	raise Http404
+
+	context = {
+		"object": obj
+	}
+	# return render(request, "products/product_detail_url_routing.html", context)
+	return render(request, "products/product_detail_dynamic_url_linking.html", context)
+"""

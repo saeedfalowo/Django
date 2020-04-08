@@ -701,3 +701,961 @@ You can also pass in Product objects as initial forms data like so:
 -------------------
 DYNAMIC URL ROUTING
 -------------------
+Now lets change our content based on the url, i.e. dynamic url routing
+Navigate to the views.py script and construct the dynamic_lookup_view function, like so:
+	def dynamic_lookup_view(request,my_id):
+	   obj = Product.objects.get(id=my_id)
+	   context = {
+		"object": obj
+	   }
+	   return render(request, "products/product_detail_url_routing.html", context)
+
+Create the product_detail_url_routing.html being referenced like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<h1>{{ object.title }}</h1>
+	<p>{{ object.description }}</p>
+	<p>{{ object.price}}</p>
+	{% endblock %}
+
+And because we want the url to be dynamic, we need to change the url path in the urls.py
+script, like so:
+	urlpatterns = [
+	   path('products/<int:my_id>/', dynamic_lookup_view, name='product')
+	]
+
+We can now navigate between the products we have create on our website like so:
+	http://127.0.0.1:8000/products/1/
+	http://127.0.0.1:8000/products/2/
+	http://127.0.0.1:8000/products/3/
+As we can see from the path defined in the urls.py: "path('products/<int:my_id>/"
+products/1/, products/2/, products/3/, will help us navigate between the products
+we have stored in our backend database
+
+-------------------
+HANDLE DOESNOTEXIST
+-------------------
+We can make it raise a 404 error is a missing object is requested.
+	from django.shortcuts import get_object_or_404
+And replace the dynamic_lookup_view function like so:
+	def dynamic_lookup_view(request,my_id):
+	   obj = get_object_or_404(Product, id=my_id)
+	   context = {
+		"object": obj
+	   }
+	   return render(request, "products/product_detail_url_routing.html", context)
+
+Navigating to a webpage that does not exist will now give us a "Page not found (404)" error
+This is a valid error
+This can be achieved with Http404 as well
+	from django.http import Http404
+And replace the dynamic_lookup_view function like so:
+	def dynamic_lookup_view(request,my_id):
+	   try:
+	      obj = Product.objects.get(id=my_id)
+	   except Product.DoesNotExist:
+	      raise Http404
+	   context = {
+		"object": obj
+	   }
+	   return render(request, "products/product_detail_url_routing.html", context)
+
+------------------
+DELETE AND CONFIRM
+------------------
+Deleting an object is super easy, barely an inconvenience
+	obj.delete()
+This will only happen on a GET request, but we want it to happen on a POST request
+Our product_delete_view function within views.py script will:
+	get the object
+	confirm the request method is POST
+	And redirects the web page back a step after confirming deletion
+The function is constructed like so:
+	def product_delete_view(request,my_id):
+	   obj = get_object_or_404(Product, id=my_id)
+	   # POST request
+	   if request.method == "POST":
+	      obj.delete() # confirming delete
+	      return redirect('../') # return one step back
+	   context = {
+	      "object": obj
+	   }
+	   return render(request, "products/product_detail_delete.html", context)
+
+The refrenced product_detail_delete.html is constructed like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<form action='.' method='POST'> {% csrf_token %}
+	   <h1>Do you want to delete the product "{{ object.title }}"?</h1>
+	   <p><input type='submit' value='Save' /> <a href='../'>Cancel</a></p>
+	
+	</form>
+
+	{% endblock %}
+
+And import product_delete_view and add the deletion page url to urls.py script like so:
+	from products.views import product_delete_view 
+	urlpatterns = [	path('products/<int:my_id>/delete/', product_delete_view, name='product-delete')]
+
+----------------------------------
+VIEW OF A LIST OF DATABASE OBJECTS
+----------------------------------
+To list out the objects within the database, we will create the product_list_view function
+within the views.py script, like so:
+	def product_list_view(request):
+	   queryset = Product.objects.all() # list of objects
+	   context = { "object_list": queryset }
+	   return render(request, "products/product_detail_obj_list.html", context)
+
+The refrenced product_detail_obj_list.html is constructed like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+
+	{{ object_list }}
+
+	{% for instance in object_list %}
+	   <p>{{ instance.id }} - {{ instance.title }} </p>
+	{% endfor %}
+
+	{% endblock %}
+
+And import product_list_view and add the deletion page url to urls.py script like so:
+	from products.views import product_list_view
+	urlpatterns = [	path('products/', product_list_view, name='product-list')]
+
+Navigating to this url http://127.0.0.1:8000/products/ should show a list of all the 
+products in the database
+
+-----------------------
+DYNAMIC LINKING OF URLS
+-----------------------
+To create a link to the detail of a given product, we can do something like this:
+	{% for instance in object_list %}
+	   <p>{{ instance.id }} - <a href='/products/{{ instance.id }}/'>
+	   {{ instance.title }} </a> </p>
+	{% endfor %}
+
+that will take us to the dynamic url defined in href
+However, changing anything in the hardcoded url defined in href, will mean the url will
+need to be changed everywhere it has been referenced.
+
+This can be made easy by creating a shortcut, an instance method, within our model
+that will do this dynamic url linking for us.
+Create a get_absolute_url function within the Product class in models.py script, like so:
+	def get_absolute_url(self):
+	   return f"/products/{self.id}" # "f" denotes f string or string substitution
+
+The html code will also change to look like so:
+
+	{% extends 'base.html' %}
+
+	{% block content %}
+
+	{{ object_list }}
+
+	{% for instance in object_list %}
+	   <p>{{ instance.id }} - <a href='{{ instance.get_absolute_url }}'>
+	   {{ instance.title }} </a> </p>
+	{% endfor %}
+
+	{% endblock %}
+
+If this html file is called product_detail_dynamic_url_linking
+the return line in our product_list_view function will now look like so:
+	return render(request, "products/product_detail_dynamic_url_linking.html", context)
+
+Navigating to this url http://127.0.0.1:8000/products/ should show a list of all the 
+products in the database. Each list element will have a hyperlink that will take us to
+their corresponding webpages.
+
+-------------------
+DJANGO URLS REVERSE
+-------------------
+Lets make our get_absolute_url function to become dynamic
+as in this string right here:
+	f"/products/{self.id}"
+
+We gave our urls within the paths defined in urlpatterns list on purpose.
+The string defined above is defined based on the names defined for each url.
+We will use "reverse" to accomplish this task, like so:
+	return reverse("product", kwargs={"my_id":self.id})
+		# "my_id" refers to the integer id declared in products/<int:my_id>/
+		# within the url patterns url with the name, product.
+
+Navigating to url http://127.0.0.1:8000/products/ should show a list of all the 
+products in the database. Each list element will have a hyperlink that will take us to
+their corresponding webpages.
+Clicking on any item in the list will take up to the product page
+If name argument used is product-delete, clicking on any of the links will take us
+to the delete page for the particular product.
+
+---------------------------
+IN APP URLS AND NAMESPACING
+---------------------------
+In other to eliminate confusing urls, we can just create a urls.py script within specific
+app. This url.py script will contain only urls pretaining to functions in the app itself.
+Then import that products/urls.py urlpatterns into the trydjango/urls.py urlpatterns
+But even after that, the web pages might still give us two pages concatenated in one
+webpage.
+This is when we used namespacing.
+We just have to declare the name of the app the urls.py belongs to within the urls.py
+itself
+The product/urls.py will look like this:
+	from django.urls import path
+
+	from .views import (
+    		product_detail_view,product_create_view,dynamic_lookup_view,
+    		product_delete_view,product_list_view,
+    	)
+
+	app_name = 'products'
+	urlpatterns = [
+    		path('<int:my_id>/detail/', product_detail_view, name='product-detail'),
+    		path('create/', product_create_view, name='product-create'),
+    		path('<int:my_id>/', dynamic_lookup_view, name='product'),
+    		path('<int:my_id>/delete/', product_delete_view, name='product-delete'),
+    		path('', product_list_view, name='product-list')
+	   ]
+
+And the products/urls.py will be called within the trydjango/urls.py like so:
+	from django.contrib import admin
+	from django.urls import path, include
+
+	from pages.views import home_view, contact_view
+	urlpatterns = [
+		path('', home_view, name='home'),
+		path('contact/', contact_view, name='home'),
+    		path('admin/', admin.site.urls),
+
+    		path('products/', include('products.urls'))
+	   ]
+
+And the return line within the get_absolute_url function will be called like so:
+	return reverse("products:product", kwargs={"my_id":self.id})
+
+----------------------------
+CLASS BASED VIEWS - LISTVIEW
+----------------------------
+1 - Create a New App named Blog
+	cd /mnt/c/Users/User/Documents/GitHub/Django/Dev/trydjango && source bin/activate
+	cd src && ls
+	python manage.py startapp Blog
+
+   The cd src && ls was to make sure you are in your manage.py and db.sqlite3 dir
+
+2 - Add 'Blog' to your Django project
+	Navigate to settings.py script and add "Blogs" to the INSTALLED_APPS list
+
+3 - Create a Model named Article
+	Navigate to Blogs/models.py and build an Article class, like so:
+		class Article(models.Model):
+		   title	= models.CharField(max_length=120) 
+		   content	= models.TextField(blank=True, null=True)
+		   active	= models.BooleanField(default=False)
+
+4 - Run Migrations
+	cd /mnt/c/Users/User/Documents/GitHub/Django/Dev/trydjango && source bin/activate
+	cd src
+	python manage.py makemigrations
+	python manage.py migrate
+
+5 - Create a ModelForm for Article
+   Create a new file within the Blog folder and name it forms.py
+   Construct a Model form for Article like so:
+	from django import forms
+
+	from .models import Article
+
+	class ArticleForm(forms.Form):
+	   class Meta:
+	      model 	= Article
+	      fields	= ['title','content','active']
+
+6 - Create 'article_list.html' & 'article_detail.html' Template
+   Create a folder within Blog named templates
+   Create new files with the names, 'article_list.html' & 'article_detail.html'
+
+
+7 - Add Article Model to Admin
+	from django.contrib import admin
+	# Register your models here.
+	from .models import Article
+	admin.site.register(Article)
+	# this is a relative import because admin.py and models.py are in the same module
+	# in the same product tree branch
+
+8 - Save a new Article object in admin
+
+------------------------------
+CLASS BASED VIEWS - DETAILVIEW
+------------------------------
+We can get the list and detailed view of our blog like so.
+Navigate to views
+	from django.shortcuts import render, get_object_or_404
+
+	from django.views.generic import(
+	   CreateView, DetailView, ListView,
+	   UpdateView, DeleteView
+	   )
+
+	from .forms import RawBlogForm
+
+	from .models import Article
+	# Create your views here.
+
+	class ArticleListView(ListView):
+	   template_name = 'articles/article_list.html'
+	   queryset = Article.objects.all()
+	   # ListView means it will look for <blog>/<modelname>_list.html
+
+	class ArticleDetailView(DetailView):
+	   template_name = 'articles/article_detail.html'
+	   #queryset = Article.objects.all()
+
+	# we can use this function to use the article id instead of pk
+	   def get_object(self):
+		id_ = self.kwargs.get("id")
+		return get_object_or_404(Article, id=id_)
+
+Then we add the urls to urls.py, like so:
+	path('list', ArticleListView.as_view(), name='article-list'), # as_view turns it into a function based view
+	path('<int:id>/', ArticleDetailView.as_view(), name='article-detail'), # id=pk (primary field)
+
+And the html files will look like so:
+article_list.html
+	{% extends 'base.html' %}
+
+	{% block content %}
+	{% for instance in object_list %}
+	    <p>{{ instance.id }} - <a href='{{ instance.get_absolute_url }}'>
+	{{ instance.title }} </a> </p>
+	{% endfor %}
+
+	{% endblock %}
+
+article_detail.html
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<h1>{{ object.title }}</h1>
+	<p>{{ object.content }}</p>
+	{% endblock %}
+
+
+------------------------------
+CLASS BASED VIEWS - CREATEVIEW
+------------------------------
+We can create blogs like so:
+Navigate to views.py and build the ArticleCreateView class like so:
+	class ArticleCreateView(CreateView):
+	   template_name = 'articles/blog_create.html'
+	   form_class = ArticleModelForm
+	   queryset = Article.objects.all() # <blog>/<modelname>_list.html
+	   success_url = '/'
+
+	   def form_valid(self, form):
+		print(form.cleaned_data)
+		return super().form_valid(form)
+
+	   def get_success_url(self):
+	      return '/'
+
+We might get this error:
+	ImporperlyConfigured at /Blog/art_create
+	No URL to redirect to: Either provide a url or define a get_absolute_url method
+	on the model
+
+So that is the reason why we include a get_absolute_url function within our Article class
+in models.py script. The function looks like so.
+	def get_absolute_url(self):
+	   return reverse("articles:article-detail", kwargs={"id":self.id})
+
+This will then redirect the webpage to the article-detail webpage for that particular blog
+that was just created.
+
+The redirect page can also be overwritten by these code lines and function as seen in
+the ArticleCreateView class above:
+	The "success_url = '/'" line will override where the 'save' button will take
+	the user
+	The "get_success_url" function is another way to override the web address
+
+Build the referenced blog_create.html like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<form action='.' method='POST'> {% csrf_token %}
+	   {{ form.as_p }}
+	   <input type='submit' value='Save' />
+	
+	</form>
+
+	{% endblock %}
+
+And import the url into the urlpatterns list within urls.py script like so:
+	path('art_create', ArticleCreateView.as_view(), name='article-create'),
+
+
+------------------------------
+CLASS BASED VIEWS - UPDATEVIEW
+------------------------------
+The UpdateView will be used to update a specific article
+Create the UpdateView class like so:
+	class ArticleUpdateView(UpdateView):
+	   template_name = 'articles/blog_create.html'
+	   form_class = ArticleModelForm
+	   queryset = Article.objects.all() # <blog>/<modelname>_list.html
+	
+	   def get_object(self):
+		id_ = self.kwargs.get("id")
+		return get_object_or_404(Article, id=id_)
+
+	   def form_valid(self, form):
+		print(form.cleaned_data)
+		return super().form_valid(form)
+
+The only difference between Create and Update is that Update needs to grab an 
+object/instance first before it can be edited.
+
+Include path in urls.py like so:
+	from .views import ArticleUpdateView
+	app_name = 'articles'
+	urlpatterns = [path('<int:id>/update', ArticleUpdateView.as_view(), name='article-update')]
+
+------------------------------
+CLASS BASED VIEWS - DELETEVIEW
+------------------------------
+We use the DeleteView to remove objects
+The DeleteView class is very similar to the DetailView class.
+The only difference is the template being used.
+Create the DeleteView class like so within the views.py script:
+	class ArticleDeleteView(DeleteView):
+	   template_name = 'articles/article_delete.html'
+	   #queryset = Article.objects.all()
+	   def get_object(self):
+		id_ = self.kwargs.get("id")
+		return get_object_or_404(Article, id=id_)
+
+	   def get_success_url(self):
+		return reverse('articles:article-list')
+
+After deleting the post, there will be no where to redirect the webpage
+That is why the get_success_url function has been included to redirect the webpage to 
+the article list page after deleting the specified article post.
+Otherwise, the error will prevent the deletion unlike the create view error which will
+still create the post despite the redirection error.
+
+Create the article_delete.html template like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<form action='.' method='POST'> {% csrf_token %}
+	   <h1>Do you want to delete the blog post "{{ object.title }}"?</h1>
+	   <p><input type='submit' value='Save' /> <a href='../'>Cancel</a></p>
+	
+	</form>
+
+	{% endblock %}
+
+Include path in urls.py like so:
+	from .views import ArticleDeleteView
+	app_name = 'articles'
+	urlpatterns = [path('<int:id>/update', ArticleUpdateView.as_view(), name='article-update')]
+
+
+---------------------------------------
+FUNCTION BASED VIEW TO CLASS BASED VIEW
+---------------------------------------
+Here is a simple function based view that just renders out a template:
+	from django.shortcuts import render
+	
+	# HTTP METHODS
+	def my_fbv(request, *args, **kwargs):
+	   return render(request, 'about.html', {})
+
+To convert this to a class based view, we will inherit from class
+	from django.views import View
+
+	# BASE VIEW Class = VIEW
+	class CourseView(View):
+	   def my_fbv(self, request, *args, **kwargs):
+	      return render(request, 'about.html', {})
+
+This will convert the function based view my_fbv into a class based view.
+The function within the class based view is almost identical to the one in the function
+based view. The only difference is that we need to add the 'self' argument to bring in the
+class instance from the CourseView class. Otherwise we will get a META error
+
+	In python, when we say:
+		new_obj = CourseView()
+	This makes new_obj as an instance of that class, CourseView.
+	This will be stored in self to be passed into other functions within the class
+
+So if we declare any variable within the class, like template_name = "about.html"
+We will be able to get access to it within a function in that class by passing in self
+into the function and accessing the variable like so, self.template_name.
+
+	class CourseView(View):
+	   template_name = "about.html"
+	   def my_fbv(self, request, *args, **kwargs):
+	      return render(request, self.template_name, {})
+
+The function names dont matter in a function based view
+But function names within class based view matter, because it should correlate to the HTTP
+method that it is trying to handle.
+'get' is the default so we will rename our function like so:
+	# BASE VIEW Class = VIEW
+	class CourseView(View):
+	   template_name = "about.html"
+	   def get(self, request, *args, **kwargs):
+	      return render(request, self.template_name, {})
+
+If you were submitting a form, you will used the post method so your Class based view
+will look like so:
+	# BASE VIEW Class = VIEW
+	class CourseView(View):
+	   def post(self, request, *args, **kwargs):
+	      return render(request, 'about.html', {})
+
+We can then import the url to the webpage like so in urls.py script
+
+	from django.urls import path
+	from .views import CourseView
+
+	app_name = 'courses'
+	urlpatterns = [
+	   path('', CourseView.as_view(), name='courses-list)
+	   ]
+
+We can also overwrite the template used for the view within urls.py like so
+	urlpatterns = [
+	   path('', CourseView.as_view(template_name='contact.html'), name='courses-list)
+	   ]
+
+Using class based views make it easy to change things without messing up too much
+
+
+---------------------------
+RAW DETAIL CLASS BASED VIEW
+---------------------------
+Lets create a model
+	from django.db import models
+
+	class Course(models.Model):
+	   title = models.CharField(max_length=120)
+
+Then bring the model into views.py and convert the CourseView to a detail view
+To do this, we will pass a parameter from our url
+	
+	urlpatterns = [
+	   path('', CourseView.as_view(template_name='contact.html'), name='courses-list),
+	   path('<int:id>/', CourseView.as_view(), name='courses-list)
+	   ]
+
+We will want to make both of these urls to be able to work.
+To accomplish this, we will pass in id=None into the get function
+
+id=None means that the id is no longer required
+id mean that the id is required
+
+	# BASE VIEW Class = VIEW
+	class CourseView(View):
+	   template_name = "courses/course_detail.html"
+	   def get(self, request, id=None, *args, **kwargs):
+	      return render(request, self.template_name, {})
+
+Within the courses app folder, we will need to create a templates folder,
+then within the templates folder, courses folder
+and within the templates/courses dir, we will create a course_detail.html file
+The file with have the following template html code:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<h1>{{object.id}} - {{ object.title }}</h1>
+	{% endblock %}
+
+It is fine to leave the url like this:
+	path('<int:id>/', CourseView.as_view(), name='courses-list)
+
+Because the view will run with the defined template_name as default
+	template_name = "courses/course_detail.html"
+
+Navigating to the webpage with an id "/courses/1" will this will give a blank webpage
+Because no context has been passed into the template itself
+To pass in the context, we will add Course class model, and define the object and context
+within views.py like so:
+	
+	from django.shortcuts import render, get_object_or_404
+	from django views import View
+	form .models import Course
+	# BASE VIEW Class = VIEW
+	class CourseView(View):
+	   template_name = "courses/course_detail.html"
+	   def get(self, request, id=None, *args, **kwargs):
+	      context = {}
+	      if id is not None:
+	         obj = get_object_or_404(Course,id=id)
+	         context['object'] = obj
+	      return render(request, self.template_name, obj)
+
+
+-------------------------
+RAW LIST CLASS BASED VIEW
+-------------------------
+Build the List view like so
+
+	class CourseListView(View):
+	   template_name = "courses/course_list.html"
+	   queryset = Course.objects.all()
+
+	   def get(self, request, *args, **kwargs):
+	      context = {'object_list': self.queryset}
+	      return render(request, self.template_name, context)
+
+Add the view path to urls.py
+	from .views import CourseListView
+	app_name = 'courses'
+	urlpatterns = [
+	   path('list', CourseListView.as_view(), name='courses-list')
+	   ]
+
+Create a course_list.html within the template/courses directory
+	{% extends 'base.html' %}
+
+	{% block content %}
+
+	{% for instance in object_list %}
+	   <p>{{ instance.id }} - {{ instance.title }}</p>
+	{% endfor %}
+
+	{% endblock %}
+
+
+Define a get_queryset method function within the CourseListView class in views.py
+This will return self.queryset
+
+	class CourseListView(View):
+	   template_name = "courses/course_list.html"
+	   queryset = Course.objects.all()
+
+	   def get_queryset(self):
+	      return render(self.queryset)
+
+	   def get(self, request, *args, **kwargs):
+	      context = {'object_list': self.get_queryset()}
+	      return render(request, self.template_name, context)
+
+This will give us a list of objects within the product
+However, we can call the CourseListView class within another class to define which specific
+objects we want in the list, like so
+
+	class MyListView(CourseListView):
+	   queryset = Course.objects.filter(id=1)
+
+And we can alter the url path like so:
+	from .views import CourseListView, MyListView
+	app_name = 'courses'
+	urlpatterns = [
+	   path('list', MyListView.as_view(), name='courses-list')
+	   ]
+
+The webpage will now give us a list of objects with id=1.
+Which is just one item
+This inheritance property is the biggest advantage of using class based views
+
+
+---------------------------
+RAW CREATE CLASS BASED VIEW
+---------------------------
+When you create something you want to accept the two methods: GET and POST methods
+Build the CourseCreateView class like so:
+
+	# import the form
+	from .forms import CourseModelForm
+	class CourseCreateView(View):
+	   template_name = "courses/course_create.html"
+
+	   # GET METHOD
+	   def get(self, request, *args, **kwargs):
+	      # GET METHOD
+	      form = CourseModelForm() # default=='GET' so leave empty
+	      context = {'form': form}
+	      return render(request, self.template_name, context)
+
+	   def post(self, request, *args, **kwargs):
+	      # POST METHOD
+	      form = CourseModelForm(request.POST)
+	      if form.is_valid():
+	         form.save()
+	         form = CourseModelForm() # This re-initialize the actual form clearing the input fields
+	      context = {'form': form}
+	      # This will grab the form data to be stored in the database
+	      return render(request, self.template_name, context)
+
+Construct the create template, course/course_create.html, like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<form action='.' method='POST'> {% csrf_token %}
+	   {{ form.as_p }}
+	   <input type='submit' value='Save' />
+	
+	</form>
+
+	{% endblock %}
+
+Add the view path to urls.py
+	from .views import CourseCreateView
+	app_name = 'courses'
+	urlpatterns = [
+	   path('create/', CourseCreateView.as_view(), name='courses-create')
+	   ]
+
+
+-------------------------------
+RAW VALIDATION ON A POST METHOD
+-------------------------------
+Use field validation to prevent the validation error from coming out
+on top of the text field on the webpage
+Validation error messages like "This field is required"
+Field validation can be a functioni within the forms class
+We can define the function with this format:
+	def clean_<fieldname>
+
+The forms.py script will look like so:
+
+	from django import forms
+	from .models import Course
+
+	class CourseModelForm(forms.modelForm):
+	   class Meta:
+	      model = Course
+	      fields = ['title']
+
+	   def clean_title(self):
+	      title = self.cleaned_data.get('title')
+	      if title.lower() == 'abc':
+	         raise forms.ValidationError("This is not a valid title")
+	      return title
+
+This validation is only on the forms level, it doesnt do it on the model.
+
+
+---------------------------
+RAW UPDATE CLASS BASED VIEW
+---------------------------
+Update is a combination of create and detail view
+
+	class CourseUpdateView(View):
+	   template_name = "courses/course_update.html"
+
+	   def get_object(self):
+		id_ = self.kwargs.get("id")
+	        obj = None
+	        if id is not None:
+	           obj = get_object_or_404(Course, id=id_)
+		return obj
+
+	   # GET METHOD
+	   def get(self, request, id=None, *args, **kwargs):
+	      # GET METHOD
+	      context = {}
+	      obj = self.get_object()
+
+	      if obj is not None:
+	         form = CourseModelForm(instance=obj)
+	         context['object'] = obj
+	         context['form'] = form
+	      return render(request, self.template_name, context)
+
+	   def post(self, request, *args, **kwargs):
+	      # POST METHOD
+	      context = {}
+	      obj = self.get_object()
+
+	      if obj is not None:
+	         form = CourseModelForm(request.POST, instance=obj)
+	         if form.is_valid():
+	            form.save()
+	         context['object'] = obj
+	         context['form'] = form
+	      return render(request, self.template_name, context)
+
+Our courses/course_update.html template will look like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<h1>Update: {{object.id}} - {{object.title}}</h1>
+	<form action='.' method='POST'> {% csrf_token %}
+	   {{ form.as_p }}
+	   <input type='submit' value='Save' />
+	
+	</form>
+
+	{% endblock %}
+
+Add the view path to urls.py
+	from .views import CourseUpdateView
+	app_name = 'courses'
+	urlpatterns = [
+	   path('<int:id>/update/', CourseUpdateView.as_view(), name='courses-update')
+	   ]
+
+---------------------------
+RAW DELETE CLASS BASED VIEW
+---------------------------
+The DeleteView is pretty much identical to the UpdateView
+The differences are that we dont need to bring in the form
+And we also need to change the html template
+And also redirect the webpage to another url after deleting the object
+
+	from django.shortcuts import redirect
+
+	class CourseDeleteView(View):
+	   template_name = "courses/course_delete.html"
+
+	   def get_object(self):
+		id_ = self.kwargs.get("id")
+	        obj = None
+	        if id is not None:
+	           obj = get_object_or_404(Course, id=id_)
+		return obj
+
+	   # GET METHOD
+	   def get(self, request, id=None, *args, **kwargs):
+	      # GET METHOD
+	      context = {}
+	      obj = self.get_object()
+
+	      if obj is not None:
+	         context['object'] = obj
+	      return render(request, self.template_name, context)
+
+	   def post(self, request, *args, **kwargs):
+	      # POST METHOD
+	      context = {}
+	      obj = self.get_object()
+
+	      if obj is not None:
+	         obj.delete()
+	         context['object'] = None
+	         return redirect('/courses/')
+	      return render(request, self.template_name, context)
+
+Add the view path to urls.py
+	from .views import CourseDeleteView
+	app_name = 'courses'
+	urlpatterns = [
+	   path('<int:id>/delete/', CourseDeleteView.as_view(), name='courses-delete')
+	   ]
+
+Create the courses/course_delete.html template like so:
+	{% extends 'base.html' %}
+
+	{% block content %}
+	<form action='.' method='POST'> {% csrf_token %}
+	   <h1>Do you want to delete the blog post "{{ object.title }}"?</h1>
+	   <p><input type='submit' value='Save' /> <a href='../'>Cancel</a></p>
+	
+	</form>
+
+	{% endblock %}
+
+
+----------------------------------
+CUSTOM MIXIN FOR CLASS BASED VIEWS
+----------------------------------
+Mixins are part of the reason class based views are so good!
+It allows us to extend class based views with some new code!
+
+	class CourseObjectMixin(object):
+	   model = Course
+	   lookup = 'id'
+
+	   def get_object(self):
+	      id = self.kwargs.get('id')
+	        obj = None
+	        if id is not None:
+	           obj = get_object_or_404(self.model, id=id)
+	      return obj
+
+This will help reduce redundancy inside of my code
+We can then get rid of any get_object method function within the code by just passing in
+the CourseObjectMixin class into the view classes
+Lets use the CourseDeleteView class as an example:
+
+	class CourseDeleteView(CourseObjectMixin, View):
+	   template_name = "courses/course_delete.html"
+
+	   """ 
+	   def get_object(self):
+		id_ = self.kwargs.get("id")
+	        obj = None
+	        if id is not None:
+	           obj = get_object_or_404(Course, id=id_)
+		return obj
+	   """
+
+	   # GET METHOD
+	   def get(self, request, id=None, *args, **kwargs):
+	      # GET METHOD
+	      context = {}
+	      obj = self.get_object()
+
+	      if obj is not None:
+	         context['object'] = obj
+	      return render(request, self.template_name, context)
+
+	   def post(self, request, *args, **kwargs):
+	      # POST METHOD
+	      context = {}
+	      obj = self.get_object()
+
+	      if obj is not None:
+	         obj.delete()
+	         context['object'] = None
+	         return redirect('/courses/')
+	      return render(request, self.template_name, context)
+
+The self.get_object() method called within the class will call for the one in the
+CourseObjectMixin class instead.
+Note:
+	class CourseDeleteView(CourseObjectMixin, View):
+
+CourseObjectMixin method should always come first in the class definition
+
+We can do the same for the CourseView class as well:
+
+	class CourseView(CourseObjectMixin, View):
+	   template_name = "courses/course_detail.html"
+	   def get(self, request, id=None, *args, **kwargs):
+	      context = {'object': self.get_object()}
+	      return render(request, self.template_name, obj)
+
+We will not need to define object like this anymore:
+	obj = get_object_or_404(Course,id=id)
+
+We can just import it straight from self like so:
+	context = {'object': self.get_object()}
+
+We might also need to make sure we are consistent with our lookup variable names as shown:
+
+	class CourseObjectMixin(object):
+	   model = Course
+	   lookup = 'id'
+
+	   def get_object(self):
+	      lookup = self.kwargs.get(self.lookup)
+	        obj = None
+	        if lookup is not None:
+	           obj = get_object_or_404(self.model, lookup=lookup)
+	      return obj
+
+However, this makes it a little more challenging so we might just leave it as defined at
+the start of this chapter
+
+---------
+CEST FINI
+---------
