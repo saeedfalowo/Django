@@ -8,7 +8,12 @@
 	{% else %}
 		Description Coming Soon
 	{% endif %}
+
 </p>
 
 {{object.price}}
+
+<p> - <a href='/products/{{ object.id }}/update/'> Update </a> </p>
+<p> - <a href="/products/{{ object.id }}/delete/"> Delete </a> </p>
+
 {% endblock %}

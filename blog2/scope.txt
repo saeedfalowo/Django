@@ -1,0 +1,1 @@
+This app, blog2, illustrates Class Based Views Implementation

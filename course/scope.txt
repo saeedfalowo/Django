@@ -1,0 +1,1 @@
+This app, course, illustrates Raw (Manual) Class Based Views Implementation

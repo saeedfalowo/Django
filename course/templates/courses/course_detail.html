@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{ object.title }}</h1>
+<p>{{ object.content }}</p>
+<p> - <a href='/course/{{ object.id }}/update/'> Update </a> </p>
+<p> - <a href="/course/{{ object.id }}/delete/"> Delete </a> </p>
+{% endblock %}

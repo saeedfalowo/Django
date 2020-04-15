@@ -25,8 +25,8 @@ class ProductForm(forms.ModelForm):
 		)
 
 	price = forms.DecimalField(initial=0.99)
-	email = forms.EmailField(widget=forms.TextInput(
-		attrs={"placeholder": "anything@something.somethingelse"}))
+	# email = forms.EmailField(widget=forms.TextInput(
+	# 	attrs={"placeholder": "anything@something.somethingelse"}))
 	class Meta:
 		model 	= Product
 		fields	= ['title','description','price']
@@ -39,14 +39,14 @@ class ProductForm(forms.ModelForm):
 			raise forms.ValidationError("This is not a valid title")
 		return title
 
-	def clean_email(self, *args, **kwargs):
-		# get the email
-		title = self.cleaned_data.get("email")
-		# to check if the required char combination, "cfe" exists in title
-		# if not "@" in email:
-		if not email.endswith("edu"):
-			raise forms.ValidationError("This is not a valid email")
-		return email
+	# def clean_email(self, *args, **kwargs):
+	# 	# get the email
+	# 	title = self.cleaned_data.get("email")
+	# 	# to check if the required char combination, "cfe" exists in title
+	# 	# if not "@" in email:
+	# 	if not email.endswith("edu"):
+	# 		raise forms.ValidationError("This is not a valid email")
+	# 	return email
 
 class RawProductForm(forms.Form):
 	title 		= forms.CharField(

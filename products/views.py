@@ -5,27 +5,17 @@ from django.http import Http404
 from .models import  Product
 from .forms import ProductForm, RawProductForm
 # Create your views here.
-def product_detail_view(request):
-	obj = Product.objects.get(id=1)
-	# context = {
-	# 	'title': obj.title,
-	# 	'description': obj.description
-	# }
-	context = {
-		'object': obj
-	}
-	# return render(request, "product/detail.html", context)
-	return render(request, "products/product_detail.html", context)
 
 def product_create_view(request):
-	obj = Product.objects.get(id=1)
-	form = ProductForm(request.POST or None, instance=obj)
+	#obj = Product.objects.get(id=1)
+	form = ProductForm(request.POST or None)#, instance=obj)
 	# initial_data = {'title': "My intial data"}
 	# form = ProductForm(request.POST or None, initial=initial_data)
 	# form = ProductForm(request.POST or None)
 	if form.is_valid():
 		form.save()
 		form = ProductForm()
+		return redirect('../')
 	
 	context = {
 		'form': form
@@ -73,6 +63,18 @@ def dynamic_lookup_view(request,my_id):
 	}
 	return render(request, "products/product_detail_url_routing.html", context)
 	# return render(request, "products/product_detail_dynamic_url_linking.html", context)
+
+# def product_detail_view(request):
+# 	obj = Product.objects.get(id=1)
+# 	# context = {
+# 	# 	'title': obj.title,
+# 	# 	'description': obj.description
+# 	# }
+# 	context = {
+# 		'object': obj
+# 	}
+# 	# return render(request, "product/detail.html", context)
+# 	return render(request, "products/product_detail.html", context)
 
 def product_delete_view(request,my_id):
 	obj = get_object_or_404(Product, id=my_id)

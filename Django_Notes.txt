@@ -14,15 +14,52 @@ Launch django:	cd src && python manage.py runserver
 -------------------------------------------------------------------------------------------------
 CREATING A NEW DJANGO PROJECT
 -----------------------------
+Open linux terminal and cd into your desired folder
+Now create your django project folder with mkdir
+	mkdir trydjango
 
-Launch django:	cd src && python manage.py runserver
-Sync Settings:	python manage.py migrate
+Then cd into the newly created folder
+	cd trydjango
 
---------------------------------------------------
-Create superuser: python manage.py createsuperuser
---------------------------------------------------
-username:	saeed
-password:	default password + 'a'
+Create your virtual environment for the trydjango project
+	virtualenv -p python3 .
+
+Activate the virtual environment
+	source bin/activate
+
+Now install django
+	pip install django==2.0.7
+
+Create and src folder and use django-admin to create a new django project
+	mkdir src
+	cd src
+	django-admin startproject trydjango .
+
+Check to see the contents of the source folder, src
+	ls
+
+This should show a trydjango folder and manage.py file
+
+Launch django:		cd src && python manage.py runserver
+Sync Settings:		python manage.py migrate
+Create superuser: 	python manage.py createsuperuser
+
+username:		saeed
+password:		default password + 'a'
+
+----------------------------
+SET UP YOUR CODE TEXT EDITOR
+----------------------------
+Open sublime text
+Navigate to Project >> Add Folder to Project
+And Select the trydjango folder in the Dev folder
+
+Navigate to Project >> Save Project As...
+And Select the trydjango folder in the Dev folder as trydjango
+
+-----------
+CREATE APPS
+-----------
 
 Create apps: 	python manage.py startapp products
 		python manage.py startapp yaomul-khamis
@@ -942,19 +979,22 @@ CLASS BASED VIEWS - LISTVIEW
 1 - Create a New App named Blog
 	cd /mnt/c/Users/User/Documents/GitHub/Django/Dev/trydjango && source bin/activate
 	cd src && ls
-	python manage.py startapp Blog
+	python manage.py startapp blog
 
    The cd src && ls was to make sure you are in your manage.py and db.sqlite3 dir
 
-2 - Add 'Blog' to your Django project
-	Navigate to settings.py script and add "Blogs" to the INSTALLED_APPS list
+2 - Add 'blog' to your Django project
+	Navigate to settings.py script and add "blog" to the INSTALLED_APPS list
 
 3 - Create a Model named Article
 	Navigate to Blogs/models.py and build an Article class, like so:
-		class Article(models.Model):
-		   title	= models.CharField(max_length=120) 
-		   content	= models.TextField(blank=True, null=True)
-		   active	= models.BooleanField(default=False)
+
+	   from django.db import models
+
+	   # Create your models here.
+	      class Article(models.Model):
+	      title	= models.CharField(max_length=120)
+	      content	= models.TextField(blank=True, null=True)
 
 4 - Run Migrations
 	cd /mnt/c/Users/User/Documents/GitHub/Django/Dev/trydjango && source bin/activate
@@ -970,9 +1010,11 @@ CLASS BASED VIEWS - LISTVIEW
 	from .models import Article
 
 	class ArticleForm(forms.Form):
+	   title	= forms.CharField()
+	   content	= forms.CharField()
 	   class Meta:
 	      model 	= Article
-	      fields	= ['title','content','active']
+	      fields	= ['title','content']
 
 6 - Create 'article_list.html' & 'article_detail.html' Template
    Create a folder within Blog named templates
@@ -984,10 +1026,271 @@ CLASS BASED VIEWS - LISTVIEW
 	# Register your models here.
 	from .models import Article
 	admin.site.register(Article)
-	# this is a relative import because admin.py and models.py are in the same module
-	# in the same product tree branch
 
 8 - Save a new Article object in admin
+
+
+----------------------------------------
+BUILDING BLOG APP - Function based views
+----------------------------------------
+
+------------------LIST-------------------------
+
+VIEWS
+
+The web app's home page was designed to have a list of all the app's objects.
+All the object list elements will be linked to urls that will take them to their individual
+detail view webpage
+The home page will also have a hyperlinked "Create" that will take the user to an object
+create page to create an article to be stored in the database.
+
+The function based view for the homepage was built like so:
+
+	from django.shortcuts import render
+	from .models import Article
+	   def BlogHomeView(request):
+	   queryset = Article.objects.all() # list of objects
+	   context = { "object_list": queryset }
+	   return render(request, "articles/articles_landingpage.html", context)
+
+TEMPLATE
+
+And the articles/articles_landingpage.html template for this home page was constructed
+like so:
+
+	{% extends 'base.html' %}
+	{% block content %}
+	<p> - <a href='/blog/create'> Create </a> </p>
+	{% for instance in object_list %}
+	   <p>{{ instance.id }} - <a href='{{ instance.get_absolute_url }}'>
+	   {{ instance.title }} </a> </p>
+	{% endfor %}
+	{% endblock %}
+
+URLS
+
+The homepage url was then added to src/blog/urls.py like so:
+
+	from django.urls import path
+	from .views import BlogHomeView
+	app_name = 'articles'
+	urlpatterns = [
+	   path('', BlogHomeView, name='articles-home')
+	]
+
+And src/trydjango/urls.py was constructed like so:
+
+	from django.contrib import admin
+	from django.urls import path, include
+	urlpatterns = [
+	   path('admin/', admin.site.urls),
+	   path('blog/', include('blog.urls'))
+	]
+
+------------------CREATE-----------------------
+
+VIEWS
+
+The create view function based view was constructed like so:
+
+	from .forms import ArticleForm
+	def BlogCreateView(request):
+	   form = ArticleForm(request.POST or None)
+	   print('Is form valid? ', form.is_valid())
+	   print('The form request? ', request.method)
+	   print(form.errors)
+	   if form.is_valid():
+	      form.save()
+	      print(form.cleaned_data)
+	      form = ArticleForm()
+	   context = {
+	      'form': form
+	      }
+	   return render(request, "articles/articles_create.html", context)
+
+TEMPLATE
+
+And the articles/articles_create.html template for this home page was constructed like so:
+
+	{% extends 'base.html' %}
+	{% block content %}
+	<form action='' method='POST'> {% csrf_token %}
+	   {{ form.as_p }}
+	   <input type='submit' value='Save' />
+	</form>
+	{% endblock %}
+
+A problem was encountered during the creation of this "Create" function
+Initially, the "Create" link successfully takes the user to the "Create" page where they
+fill out the text fields provided.
+However, hitting save will only take the user back to the homepage without saving the form
+into the backend.
+Checking the backend revealed the output of these lines:
+
+	print('Is form valid? ', form.is_valid())
+	>>> Is form valid? False
+	print('The form request? ', request.method)
+	>>> The form request? GET
+
+Despite initializing the form like so:
+	form = ArticleForm(request.POST or None)
+The request method was still GET
+After a period of solution surfing online, we realised that the form was invalid because
+of form action method in the template.
+So we replaced the initial form action method:
+	<form action='.' method='POST'> {% csrf_token %}
+with this:
+	<form action='' method='POST'> {% csrf_token %}
+
+Just the removal of the period (.) from "action='.'" to turn it into "action=''"
+resolved the problem.
+Even those both action methods, "action='.'" & "action=''" goes to the current url
+Only this, "action=''", worked for our function based create view
+
+URLS
+
+The create page url was then added to urlpatterns in src/blog/urls.py like so:
+
+	from .views import BlogCreateView
+	urlpatterns = [
+	   path('create/', BlogCreateView, name='articles-create')
+	]
+
+
+------------------DETAIL-----------------------
+
+VIEWS
+
+The detail view function based view was constructed like so:
+
+	def BlogDetailView(request,my_id):
+	   obj = Article.objects.get(id=my_id)
+	   context = {
+	      'object': obj
+	      }
+	   return render(request, "articles/articles_detail.html", context)
+
+TEMPLATE
+
+And the articles/articles_detail.html template for this home page was constructed like so:
+
+	{% extends 'base.html' %}
+	{% block content %}
+	<h1>{{ object.title }}</h1>
+	<p>{{ object.content }}</p>
+	{% endblock %}
+
+URLS
+
+The detail page url was then added to urlpatterns in src/blog/urls.py like so:
+
+	from .views import BlogDetailView
+	urlpatterns = [
+	   path('<int:my_id>/', BlogDetailView, name='articles-detail')
+	]
+
+MODELS
+
+And finally, the get_absolute_url function was added to the Article class in
+src/blog/models.py
+This function will auto route the url desired by defining the url path name parameter,
+'articles-detail' as seen above.
+The id of the object selected in the homepage list will be passed into the url as, "my_id"
+
+	def get_absolute_url(self):
+	   return reverse("articles:articles-detail", kwargs={"my_id": self.id})
+
+
+------------------DELETE-----------------------
+
+VIEWS
+
+The idea for the delete and update functionality was to have links within each article
+details page that will take the user to a delete or update page to either delete or update
+the article.
+
+The delete view function based view was constructed like so:
+
+	def BlogDeleteView(request, my_id):
+	   #obj = Article.objects.get(id=my_id)
+	   obj = get_object_or_404(Article, id=my_id)
+	   if request.method == "POST":
+	      obj.delete()
+	      return redirect('/blog/')
+	   context = {
+	      "object": obj
+	      }
+	   return render(request, "articles/articles_delete.html", context)
+
+TEMPLATE
+
+A little alteration was made to the articles/articles_detail.html template to display links
+that will take the user to delete and update page.
+These two lines were added to the articles/articles_detail.html template file:
+
+	<p> - <a href='/blog/{{ object.id }}/update/'> Update </a> </p>
+	<p> - <a href="/blog/{{ object.id }}/delete/"> Delete </a> </p>
+
+These two lines contain the link after the server link, http://127.0.0.1:8000.
+The href links are the hyperlink url appended to the Update and Delete words.
+The complete articles/articles_detail.html template file now looks like this:
+
+	{% extends 'base.html' %}
+	{% block content %}
+	<h1>{{ object.title }}</h1>
+	<p>{{ object.content }}</p>
+	<p> - <a href='/blog/{{ object.id }}/update/'> Update </a> </p>
+	<p> - <a href="/blog/{{ object.id }}/delete/"> Delete </a> </p>
+	{% endblock %}
+
+And the articles/articles_delete.html template for this home page was constructed like so:
+
+	{% extends 'base.html' %}
+	{% block content %}
+	<form action='' method='POST'> {% csrf_token %}
+	   <h1>Do you want to delete the product "{{ object.title }}"?</h1>
+	   <p><input type='submit' value='Yes' />  <a href='/blog/'>Cancel</a></p>
+	</form>
+	{% endblock %}
+
+URLS
+
+The delete page url was then added to urlpatterns in src/blog/urls.py like so:
+
+	from .views import BlogDeleteView
+	urlpatterns = [
+	   path('<int:my_id>/delete/', BlogDeleteView, name='articles-delete')
+	]
+
+------------------UPDATE-----------------------
+
+VIEWS
+
+The update view function based view was constructed like so:
+
+	def BlogUpdateView(request, my_id=id):
+	   obj = get_object_or_404(Article, id=my_id)
+	   form = ArticleForm(request.POST or None, instance=obj)
+	   if form.is_valid():
+	      form.save()
+	      return redirect('../')
+	   context = {
+	      'form': form
+	      }
+	   return render(request, "articles/articles_create.html", context)
+
+TEMPLATE
+
+The update view uses the same template the create view uses, articles/articles_create.html.
+
+URLS
+
+The update page url was then added to urlpatterns in src/blog/urls.py like so:
+
+	from .views import BlogUpdateView
+	urlpatterns = [
+	   path('<int:my_id>/update/', BlogUpdateView, name='articles-create')
+	]
 
 ------------------------------
 CLASS BASED VIEWS - DETAILVIEW
@@ -1122,7 +1425,11 @@ object/instance first before it can be edited.
 Include path in urls.py like so:
 	from .views import ArticleUpdateView
 	app_name = 'articles'
-	urlpatterns = [path('<int:id>/update', ArticleUpdateView.as_view(), name='article-update')]
+	urlpatterns = [path('<int:id>/update/', ArticleUpdateView.as_view(), name='article-update')]
+
+The omission of the final '/' in the path definition could lead to "Page Not Found" error
+'<int:id>/update' --- "Page Not Found"
+'<int:id>/update/'--- SUCCESS!
 
 ------------------------------
 CLASS BASED VIEWS - DELETEVIEW
@@ -1295,10 +1602,12 @@ within views.py like so:
 	   template_name = "courses/course_detail.html"
 	   def get(self, request, id=None, *args, **kwargs):
 	      context = {}
+	      id = self.kwargs.get('id') # id defined in url path in urls.py
+	      #path('<int:id>/', CourseView.as_view(), name='courses-list)
 	      if id is not None:
 	         obj = get_object_or_404(Course,id=id)
 	         context['object'] = obj
-	      return render(request, self.template_name, obj)
+	      return render(request, self.template_name, context)
 
 
 -------------------------
